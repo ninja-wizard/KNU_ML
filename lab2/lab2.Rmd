@@ -1,0 +1,87 @@
+
+**Machine Learning lab 2**
+
+Kucheriavyi Yaroslav. ІАВ-21
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+**Read the data**
+
+```{r}
+dt<-read.csv("C:/Users/NinjaWizard/Documents/mlbootcamp5_train.csv",sep=";")
+```
+
+**Transform the features: **
+**- create "age in years" (`age_years`)dividing age by 365.25 and taking floor ($\lfloor{x}\rfloor$ is the largest integer that is less than or equal to $x$)**
+**- remove "age" feature**
+**- transfrom `cholesterol` and `gluc` to factor**
+
+```{r}
+dt$age_years<-floor(dt$age/365.25)
+dt<-subset(dt,select=c(cardio,gender,height,weight,ap_hi,ap_lo,cholesterol,gluc,smoke,alco,active,age_years))
+
+dt$cholesterol<-as.factor(dt$cholesterol)
+dt$gluc<-as.factor(dt$gluc)
+dt$cardio<-as.factor(dt$cardio)
+```
+
+**Split data into train and test parts in the proportion of 7/3.**
+**The target feature is `cardio`**
+
+```{r}
+library(caret)
+set.seed(1953)
+index<-createDataPartition(dt$cardio,p=0.7,list=FALSE,times=1)
+training<-dt[index,]
+test<-dt[-index,]
+```
+
+**Train a decision tree on the dataset `training` with **max depth equal to 3**. For setting this parameter use function `rpart::rpart.control`. Use default cross calidation parameters.**
+
+```{r}
+library(rpart)
+fit<-train(cardio~gender+height+weight+ap_hi+ap_lo+cholesterol+gluc+smoke+alco+active+age_years, data=training,method="rpart",control=rpart.control(maxdepth=3))
+```
+
+**Plot final tree with `rattle` library**
+
+```{r}
+library(rattle)
+fancyRpartPlot(fit$finalModel,main="Cardio feature decision tree scheme",sub="Decision tree 1")
+```
+
+**What is the accuracy of prediction on test data?**
+
+```{r}
+pred<-predict(fit, test)
+acc<-sum(pred==test$cardio)/nrow(test)
+print(acc)
+```
+
+**Now set cross validation parameters: `method = "cv"`, `number = 5`. Tree parameters set to default.**
+
+```{r}
+fitControl<-trainControl(method ="cv",number=5)
+fit2<-train(cardio~gender+height+weight+ap_hi+ap_lo+cholesterol+gluc+smoke+alco+active+age_years, data=training,method="rpart",trControl=fitControl)
+```
+
+**Plot final tree with `rattle` library**
+
+```{r}
+library(rattle)
+fancyRpartPlot(fit2$finalModel,main="Cardio feature decision tree plot",sub="Decision tree ver.2")
+```
+
+**What is the accuracy of prediction on test data?**
+
+```{r}
+newPred<-predict(fit2,test)
+acc<-sum(newPred==test$cardio)/nrow(test)
+print(acc)
+```
+
+**Does the accuracy became better or not?**
+
+**R: **Changing model parameters didn't improve its accuracy.

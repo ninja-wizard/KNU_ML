@@ -1,0 +1,80 @@
+
+**Machine Learning lab 4**
+
+Kucheriavyi Yaroslav. ІАВ-21
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+```{r}
+library(lattice); library(ggplot2); library(caret); library(randomForest); library(rpart); library(rpart.plot);
+```
+
+```{r}
+# data upload and cleanup
+trainingset<-read.csv("C:/Users/NinjaWizard/Documents/pml-training.csv",na.strings=c("NA","#DIV/0!", ""))
+testingset<-read.csv("C:/Users/NinjaWizard/Documents/pml-testing.csv",na.strings=c("NA","#DIV/0!", ""))
+original_testingset<-testingset
+original_testingset$X<-NULL
+
+# Clear missing values
+trainingset<-trainingset[,colSums(is.na(trainingset)) == 0]
+testingset<-testingset[,colSums(is.na(testingset)) == 0]
+
+# Clear irrelevant columns
+trainingset<-trainingset[,-c(1:7)]
+testingset<-testingset[,-c(1:7)]
+
+# Split training/testing data
+traintrainset<-createDataPartition(y=trainingset$classe,p=0.75,list=FALSE)
+TrainTrainingSet<-trainingset[traintrainset, ] 
+TestTrainingSet<-trainingset[-traintrainset, ]
+```
+
+**Prediction model 1: Decision Tree **
+
+```{r}
+model1<-rpart(
+    classe ~ .,
+    data=TrainTrainingSet,
+    method="class"
+)
+
+prediction1<-predict(model1,TestTrainingSet,type="class")
+
+# Plot the Decision Tree
+rpart.plot(model1,main="Classification Tree",extra=102,under=TRUE,faclen=0)
+
+# Test results on our TestTrainingSet data set:
+confusionMatrix(prediction1,as.factor(TestTrainingSet$classe))
+```
+
+**Prediction model 2: Random Forest**
+
+```{r}
+TrainTrainingSet$classe = factor(TrainTrainingSet$classe)
+model2<-randomForest(
+    classe ~. ,
+    data=TrainTrainingSet,
+    method="class"
+)
+
+# Predicting:
+prediction2<-predict(model2,TestTrainingSet,type="class")
+
+# Test results on TestTrainingSet data set:
+confusionMatrix(prediction2,as.factor(TestTrainingSet$classe))
+```
+
+**Result: ** Random forest algorithm shows better performance of 99.57% accuracy versus 74.31% of desicion tree. Thus, random forest is considered superior for the task given. 
+
+The final outcome of random forest applied against the testing dataset is stored as `result.csv`
+
+```{r}
+# predict outcome levels on the original Testing data set using Random Forest algorithm
+predictfinal<-predict(model2,testingset,type="class")
+original_testingset$classe<-predictfinal
+result<-original_testingset[,c(ncol(original_testingset),1:(ncol(original_testingset)-1))]
+write.csv(result,'./result.csv')
+```
